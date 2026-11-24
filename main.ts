@@ -13,7 +13,7 @@
 // anyone reaches for (micromanager / tyrant / bossy), and it travels —
 // kitchens, warehouses and offices all have fires, literal and otherwise.
 
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
 // The entry text. Exactly one word, 8 code points, 8 bytes UTF-8.
 const ENTRY = "arsonist";
@@ -36,8 +36,19 @@ function selfCheck(text: string): void {
   if (text !== text.trim()) {
     throw new Error("gate failed: entry must not have leading/trailing space");
   }
+  // Output must stay byte-identical on every run: 8 bytes UTF-8, no newline.
+  if (new TextEncoder().encode(text).length > 200) {
+    throw new Error("gate failed: entry must be at most 200 bytes");
+  }
+  if (text.includes("\n") || text.includes("\r")) {
+    throw new Error("gate failed: entry must not contain a newline");
+  }
 }
 
 selfCheck(ENTRY);
 mkdirSync("/output", { recursive: true });
 writeFileSync("/output/entry.txt", ENTRY, "utf8");
+// Read-back: the bytes on disk must equal the entry exactly.
+if (readFileSync("/output/entry.txt", "utf8") !== ENTRY) {
+  throw new Error("gate failed: written entry does not match ENTRY");
+}
